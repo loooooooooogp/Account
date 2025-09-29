@@ -26,7 +26,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         name TEXT NOT NULL,
-        type TEXT NOT NULL,  # 如：现金、支付宝、银行卡等
+        type TEXT NOT NULL,
         balance REAL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id)
@@ -50,7 +50,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         account_id INTEGER NOT NULL,
-        type TEXT NOT NULL,  # income 或 expense
+        type TEXT NOT NULL,
         amount REAL NOT NULL,
         category_id INTEGER NOT NULL,
         date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

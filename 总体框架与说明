@@ -1,0 +1,13 @@
+users: 存储用户信息
+accounts: 存储账户信息
+transactions: 存储交易记录（收入和支出）
+categories: 存储分类（预置一些常用分类，同时允许用户自定义）
+
+main.py: 主程序入口，提供命令行菜单
+database.py: 数据库初始化及连接
+models.py: 定义数据模型（表结构）
+auth.py: 用户认证相关功能
+transaction_manager.py: 交易管理功能
+account_manager.py: 账户管理功能
+statistics.py: 统计功能
+utils.py: 工具函数

@@ -1,4 +1,5 @@
 import hashlib
+import sqlite3
 from database import get_db_connection
 
 def hash_password(password):

@@ -3,7 +3,7 @@ from database import init_db
 from auth import register_user, login_user
 from transaction_manager import add_transaction, get_transactions, edit_transaction, delete_transaction
 from account_manager import add_account, get_accounts, delete_account
-from statistics import get_category_stats, get_monthly_stats, get_account_stats, get_summary
+from mystatistics import get_category_stats, get_monthly_stats, get_account_stats, get_summary
 from utils import input_date, input_float, input_int
 
 def main():
