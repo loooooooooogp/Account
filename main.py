@@ -50,13 +50,124 @@ def main():
             
             if choice == '1':
                 # 添加交易记录
-                pass  # 这里需要实现
+                print("\n--- 添加交易记录 ---")
+                accounts = get_accounts(current_user[0])
+                if not accounts:
+                    print("请先添加账户！")
+                    continue
+                print("可用账户：")
+                for acc in accounts:
+                    print(f"{acc[0]}. {acc[1]} (类型: {acc[2]}, 余额: {acc[3]})")
+                account_id = input_int("请选择账户ID: ")
+                t_type = input("类型 (income/expense): ")
+                if t_type not in ('income', 'expense'):
+                    print("类型输入错误！")
+                    continue
+                # 分类选择
+                from database import get_db_connection
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT id, name FROM categories WHERE (user_id = ? OR user_id IS NULL) AND type = ?", (current_user[0], t_type))
+                categories = cursor.fetchall()
+                conn.close()
+                if not categories:
+                    print("请先添加分类！")
+                    continue
+                print("可用分类：")
+                for cat in categories:
+                    print(f"{cat[0]}. {cat[1]}")
+                category_id = input_int("请选择分类ID: ")
+                amount = input_float("金额: ")
+                date = input_date("日期")
+                description = input("备注(可选): ")
+                add_transaction(current_user[0], account_id, t_type, amount, category_id, date, description)
+                print("交易记录添加成功！")
             elif choice == '2':
                 # 查看交易记录
-                pass
+                print("\n--- 查看交易记录 ---")
+                filters = {}
+                print("1. 全部  2. 按类型  3. 按分类  4. 按时间段")
+                f_choice = input("请选择过滤方式(回车为全部): ")
+                if f_choice == '2':
+                    t_type = input("类型 (income/expense): ")
+                    if t_type in ('income', 'expense'):
+                        filters['type'] = t_type
+                elif f_choice == '3':
+                    from database import get_db_connection
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT id, name FROM categories WHERE (user_id = ? OR user_id IS NULL)", (current_user[0],))
+                    categories = cursor.fetchall()
+                    conn.close()
+                    print("可用分类：")
+                    for cat in categories:
+                        print(f"{cat[0]}. {cat[1]}")
+                    category_id = input_int("请选择分类ID: ")
+                    filters['category_id'] = category_id
+                elif f_choice == '4':
+                    filters['start_date'] = input("开始日期 (YYYY-MM-DD): ")
+                    filters['end_date'] = input("结束日期 (YYYY-MM-DD): ")
+                    records = get_transactions(current_user[0], filters)
+                if not records:
+                    print("无交易记录。"); continue
+                print("ID | 类型 | 金额 | 分类 | 账户 | 日期 | 备注")
+                for r in records:
+                    print(f"{r[0]} | {r[1]} | {r[2]} | {r[3]} | {r[4]} | {r[5]} | {r[6]}")
+                # 可选：编辑/删除
+                print("1. 编辑 2. 删除 3. 返回")
+                op = input("请选择操作: ")
+                if op == '1':
+                    tid = input_int("输入要编辑的交易ID: ")
+                    field = input("要修改的字段(account_id/type/amount/category_id/date/description): ")
+                    value = input("新值: ")
+                    if field in ('amount',):
+                        value = float(value)
+                    elif field in ('account_id', 'category_id'):
+                        value = int(value)
+                    elif field == 'date':
+                        from utils import input_date
+                        value = input_date("新日期")
+                    updates = {field: value}
+                    if edit_transaction(tid, current_user[0], updates):
+                        print("修改成功！")
+                    else:
+                        print("修改失败！")
+                elif op == '2':
+                    tid = input_int("输入要删除的交易ID: ")
+                    if delete_transaction(tid, current_user[0]):
+                        print("删除成功！")
+                    else:
+                        print("删除失败！")
+                else:
+                    continue
             elif choice == '3':
                 # 管理账户
-                pass
+                print("\n--- 账户管理 ---")
+                print("1. 添加账户 2. 查看账户 3. 删除账户 4. 返回")
+                acc_choice = input("请选择: ")
+                if acc_choice == '1':
+                    name = input("账户名称: ")
+                    acc_type = input("账户类型(如现金/银行卡): ")
+                    balance = input_float("初始余额: ")
+                    add_account(current_user[0], name, acc_type, balance)
+                    print("账户添加成功！")
+                elif acc_choice == '2':
+                    accounts = get_accounts(current_user[0])
+                    print("ID | 名称 | 类型 | 余额")
+                    for acc in accounts:
+                        print(f"{acc[0]} | {acc[1]} | {acc[2]} | {acc[3]}")
+                elif acc_choice == '3':
+                    accounts = get_accounts(current_user[0])
+                    print("ID | 名称 | 类型 | 余额")
+                    for acc in accounts:
+                        print(f"{acc[0]} | {acc[1]} | {acc[2]} | {acc[3]}")
+                    del_id = input_int("输入要删除的账户ID: ")
+                    if delete_account(del_id, current_user[0]):
+                        print("删除成功！")
+                    else:
+                        print("账户下有交易记录，无法删除！")
+                else:
+                    continue
             elif choice == '4':
                 # 查看统计
                 print("\n--- 统计功能 ---")
@@ -68,27 +179,27 @@ def main():
                 if stat_choice == '1':
                     start_date = input("开始日期 (YYYY-MM-DD): ")
                     end_date = input("结束日期 (YYYY-MM-DD): ")
-                    result = get_category_stats(current_user['id'], start_date, end_date)
+                    result = get_category_stats(current_user[0], start_date, end_date)
                     print("按分类统计结果:")
                     for row in result:
                         print(row)
                 elif stat_choice == '2':
                     year = input("年份 (如2024): ")
-                    result = get_monthly_stats(current_user['id'], int(year))
+                    result = get_monthly_stats(current_user[0], int(year))
                     print("按月份统计结果:")
                     for row in result:
                         print(row)
                 elif stat_choice == '3':
                     start_date = input("开始日期 (YYYY-MM-DD): ")
                     end_date = input("结束日期 (YYYY-MM-DD): ")
-                    result = get_account_stats(current_user['id'], start_date, end_date)
+                    result = get_account_stats(current_user[0], start_date, end_date)
                     print("按账户统计结果:")
                     for row in result:
                         print(row)
                 elif stat_choice == '4':
                     start_date = input("开始日期 (YYYY-MM-DD): ")
                     end_date = input("结束日期 (YYYY-MM-DD): ")
-                    summary = get_summary(current_user['id'], start_date, end_date)
+                    summary = get_summary(current_user[0], start_date, end_date)
                     print("财务汇总:")
                     for k, v in summary.items():
                         print(f"{k}: {v}")

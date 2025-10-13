@@ -12,53 +12,53 @@ def init_db():
     
     # 创建用户表
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    create table if not exists users (
+        id integer primary key autoincrement,
+        username text unique not null,
+        password text not null,
+        created_at timestamp default current_timestamp
     )
     ''')
     
     # 创建账户表
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS accounts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        balance REAL DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+    create table if not exists accounts (
+        id integer primary key autoincrement,
+        user_id integer not null,
+        name text not null,
+        type text not null,
+        balance real default 0,
+        created_at timestamp default current_timestamp,
+        foreign key (user_id) references users (id)
     )
     ''')
     
     # 创建分类表（预置一些常用分类）
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS categories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,  
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        UNIQUE(user_id, name, type)
+    create table if not exists categories (
+        id integer primary key autoincrement,
+        user_id integer,  
+        name text not null,
+        type text not null,
+        unique(user_id, name, type)
     )
     ''')
     
     # 创建交易记录表
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS transactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        account_id INTEGER NOT NULL,
-        type TEXT NOT NULL,
-        amount REAL NOT NULL,
-        category_id INTEGER NOT NULL,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (account_id) REFERENCES accounts (id),
-        FOREIGN KEY (category_id) REFERENCES categories (id)
+    create table if not exists transactions (
+        id integer primary key autoincrement,
+        user_id integer not null,
+        account_id integer not null,
+        type text not null,
+        amount real not null,
+        category_id integer not null,
+        date timestamp default current_timestamp,
+        description text,
+        created_at timestamp default current_timestamp,
+        foreign key (user_id) references users (id),
+        foreign key (account_id) references accounts (id),
+        foreign key (category_id) references categories (id)
     )
     ''')
     
@@ -75,7 +75,7 @@ def init_db():
         (None, '其他', 'expense')
     ]
     
-    cursor.executemany('INSERT OR IGNORE INTO categories (user_id, name, type) VALUES (?, ?, ?)', preset_categories)
+    cursor.executemany('insert or ignore into categories (user_id, name, type) values (?, ?, ?)', preset_categories)
     
     conn.commit()
     conn.close()
