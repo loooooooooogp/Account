@@ -1,9 +1,24 @@
+# transaction_manager.py
 from database import get_db_connection
 from datetime import datetime
 
 def add_transaction(user_id, account_id, type, amount, category_id, date, description=None):
     conn = get_db_connection()
     cursor = conn.cursor()
+    # 检查账户是否属于当前用户
+    cursor.execute('SELECT id FROM accounts WHERE id = ? AND user_id = ?', (account_id, user_id))
+    if not cursor.fetchone():
+        conn.close()
+        print("错误：账户不存在或不属于当前用户。")
+        return False
+
+    # 检查分类是否属于当前用户或系统预置
+    cursor.execute('SELECT id FROM categories WHERE id = ? AND (user_id = ? OR user_id IS NULL)', (category_id, user_id))
+    if not cursor.fetchone():
+        conn.close()
+        print("错误：分类不存在或不可用。")
+        return False
+
     # 首先更新账户余额
     if type == 'income':
         cursor.execute('UPDATE accounts SET balance = balance + ? WHERE id = ?', (amount, account_id))
@@ -18,6 +33,7 @@ def add_transaction(user_id, account_id, type, amount, category_id, date, descri
     
     conn.commit()
     conn.close()
+    return True  # 修复这行，删除错误的 "TrueId!"
 
 def get_transactions(user_id, filters=None):
     # filters 可以是一个字典，包含类型、分类、时间范围等

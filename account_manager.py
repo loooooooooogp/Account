@@ -1,12 +1,20 @@
+# account_manager.py
 from database import get_db_connection
 
 def add_account(user_id, name, type, initial_balance=0):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('INSERT INTO accounts (user_id, name, type, balance) VALUES (?, ?, ?, ?)', 
-                   (user_id, name, type, initial_balance))
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute('INSERT INTO accounts (user_id, name, type, balance) VALUES (?, ?, ?, ?)', 
+                       (user_id, name, type, initial_balance))
+        conn.commit()
+        print(f"调试: 账户添加成功 - 用户ID: {user_id}, 账户名: {name}")  # 添加调试信息
+        return True
+    except Exception as e:
+        print(f"调试: 添加账户时出错: {str(e)}")  # 添加调试信息
+        return False
+    finally:
+        conn.close()
 
 def get_accounts(user_id):
     conn = get_db_connection()
