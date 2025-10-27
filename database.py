@@ -15,8 +15,20 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    # ... 表创建代码不变 ...
-    
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS user_account_links (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        owner_user_id INTEGER NOT NULL,  -- 账户所有者
+        linked_user_id INTEGER NOT NULL,  -- 被关联的用户
+        account_id INTEGER NOT NULL,      -- 被关联的账户
+        permission_level TEXT DEFAULT 'read',  -- read: 只读, write: 可写
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (owner_user_id) REFERENCES users (id),
+        FOREIGN KEY (linked_user_id) REFERENCES users (id),
+        FOREIGN KEY (account_id) REFERENCES accounts (id),
+        UNIQUE(linked_user_id, account_id)  -- 防止重复关联
+    )
+    ''')
     # 只有在新数据库时才插入预置分类
     if not db_exists:
         print("初始化新数据库，插入预置分类...")
