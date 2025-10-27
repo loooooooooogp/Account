@@ -135,7 +135,7 @@ def view_transactions_flow(current_user):
         if validate_category_access(user_id, cid):
             filters['category_id'] = cid
     elif ch == '4':
-        filters['start_date'] = input("开始日期: ")
+        filters['start_date'] = input("开始日期: ") 
         filters['end_date'] = input("结束日期: ")
     elif ch == '5':
         if input("按类型过滤? (y/n): ").lower() == 'y':
