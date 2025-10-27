@@ -8,53 +8,6 @@ from account_manager import add_account, get_accounts, delete_account, update_ac
 from mystatistics import get_category_stats, get_monthly_stats, get_account_stats, get_summary
 from utils import input_date, input_float, input_int
 
-# 新增密码输入函数，显示星号
-def input_password(prompt="密码: "):
-    """显示星号的密码输入函数"""
-    if platform.system() == "Windows":
-        # Windows 平台
-        import msvcrt
-        print(prompt, end='', flush=True)
-        password = []
-        while True:
-            ch = msvcrt.getch()
-            if ch in [b'\r', b'\n']:  # 回车键
-                print('')
-                break
-            elif ch == b'\x08':  # 退格键
-                if password:
-                    password.pop()
-                    print('\b \b', end='', flush=True)
-            else:
-                password.append(ch.decode('utf-8'))
-                print('*', end='', flush=True)
-        return ''.join(password)
-    else:
-        # Linux/Mac 平台
-        import termios
-        import tty
-        print(prompt, end='', flush=True)
-        password = []
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            while True:
-                ch = sys.stdin.read(1)
-                if ch in ['\r', '\n']:  # 回车键
-                    print('')
-                    break
-                elif ch == '\x7f':  # 退格键
-                    if password:
-                        password.pop()
-                        print('\b \b', end='', flush=True)
-                else:
-                    password.append(ch)
-                    print('*', end='', flush=True)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ''.join(password)
-    
 
 # 在 main.py 中修改 get_user_categories 函数
 def get_user_categories(user_id, transaction_type=None):
@@ -91,6 +44,7 @@ def get_user_categories(user_id, transaction_type=None):
             unique_categories.append((cid, name, ctype))
     
     return unique_categories
+
 def validate_account_access(user_id, account_id):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -184,7 +138,7 @@ def view_transactions_flow(current_user):
         if validate_category_access(user_id, cid):
             filters['category_id'] = cid
     elif ch == '4':
-        filters['start_date'] = input("开始日期: ")
+        filters['start_date'] = input("开始日期: ") 
         filters['end_date'] = input("结束日期: ")
     elif ch == '5':
         if input("按类型过滤? (y/n): ").lower() == 'y':
@@ -416,14 +370,14 @@ def main():
             c = input("请选择: ").strip()
             if c == '1':
                 u = input("用户名: ")
-                p = input_password("密码: ")
+                p = input("密码: ")
                 if register_user(u, p):
                     print("注册成功")
                 else:
                     print("用户名已存在")
             elif c == '2':
                 u = input("用户名: ")
-                p = input_password("密码: ")
+                p = input("密码: ")
                 user = login_user(u, p)
                 if user:
                     current_user = user
@@ -514,6 +468,273 @@ def main():
                 current_user = None
             else:
                 print("无效选择")
+
+
+if __name__ == '__main__':
+    main()
+
+
+if __name__ == '__main__':
+    main()
+    # 显示统计信息
+    if filters.get('start_date') and filters.get('end_date'):
+        summary = get_summary(current_user[0], filters['start_date'], filters['end_date'])
+        print(f"\n统计期间: {filters['start_date']} 至 {filters['end_date']}")
+        print(f"总收入: {summary['total_income']:.2f}")
+        print(f"总支出: {summary['total_expense']:.2f}")
+        print(f"结余: {summary['balance']:.2f}")
+        if summary['total_income'] > 0:
+            print(f"储蓄率: {summary['saving_rate']:.1f}%")
+    
+    print(f"\n找到 {len(records)} 条交易记录:")
+    print("-" * 80)
+    print(f"{'ID':<4} {'类型':<8} {'金额':<10} {'分类':<10} {'账户':<12} {'日期':<12} {'备注'}")
+    print("-" * 80)
+    
+    for r in records:
+        trans_id, t_type, amount, category, account, date, description = r
+        type_display = "收入" if t_type == 'income' else "支出"
+        amount_display = f"+{amount:.2f}" if t_type == 'income' else f"-{amount:.2f}"
+        date_short = str(date)[:10]  # 只显示日期部分
+        desc_display = description if description else ""
+        
+        print(f"{trans_id:<4} {type_display:<8} {amount_display:<10} {category:<10} {account:<12} {date_short:<12} {desc_display}")
+    
+    # 提供操作选项
+    while True:
+        print("\n请选择操作:")
+        print("1. 编辑记录")
+        print("2. 删除记录") 
+        print("3. 返回主菜单")
+        
+        op = input("请选择(1-3): ").strip()
+        
+        if op == '1':
+            edit_transaction_flow(current_user, records)
+            break
+        elif op == '2':
+            delete_transaction_flow(current_user, records)
+            break
+        elif op == '3':
+            break
+        else:
+            print("无效选择，请重新输入。")
+
+def edit_transaction_flow(current_user, records):
+    """编辑交易记录流程"""
+    if not records:
+        print("没有可编辑的记录。")
+        return
+    
+    tid = input_int("输入要编辑的交易ID: ")
+    
+    # 验证交易ID是否存在且属于当前用户
+    target_record = None
+    for record in records:
+        if record[0] == tid:
+            target_record = record
+            break
+    
+    if not target_record:
+        print("无效的交易ID或该记录不属于当前过滤结果。")
+        return
+    
+    print(f"\n当前交易信息:")
+    print(f"ID: {target_record[0]}")
+    print(f"类型: {target_record[1]}")
+    print(f"金额: {target_record[2]}")
+    print(f"分类: {target_record[3]}")
+    print(f"账户: {target_record[4]}")
+    print(f"日期: {target_record[5]}")
+    print(f"备注: {target_record[6] if target_record[6] else '无'}")
+    
+    updates = {}
+    
+    # 选择要修改的字段
+    print("\n请选择要修改的字段:")
+    print("1. 账户")
+    print("2. 类型") 
+    print("3. 金额")
+    print("4. 分类")
+    print("5. 日期")
+    print("6. 备注")
+    print("7. 完成编辑")
+    
+    while True:
+        field_choice = input("请选择(1-7): ").strip()
+        
+        if field_choice == '1':
+            accounts = get_accounts(current_user[0])
+            print("可用账户：")
+            for acc in accounts:
+                print(f"{acc[0]}. {acc[1]} (余额: {acc[3]:.2f})")
+            
+            while True:
+                account_id = input_int("请输入新的账户ID: ")
+                if validate_account_access(current_user[0], account_id):
+                    updates['account_id'] = account_id
+                    break
+                print("无效的账户ID，请重新选择。")
+        
+        elif field_choice == '2':
+            while True:
+                new_type = input("新的类型 (income/expense): ").lower()
+                if new_type in ('income', 'expense'):
+                    updates['type'] = new_type
+                    break
+                print("类型输入错误，请输入 income 或 expense")
+        
+        elif field_choice == '3':
+            new_amount = input_float("新的金额: ")
+            if new_amount > 0:
+                updates['amount'] = new_amount
+            else:
+                print("金额必须大于0！")
+        
+        elif field_choice == '4':
+            # 根据当前类型或新类型获取分类
+            trans_type = updates.get('type', target_record[1])
+            categories = get_user_categories(current_user[0], trans_type)
+            
+            print("可用分类：")
+            for cat in categories:
+                print(f"{cat[0]}. {cat[1]}")
+            
+            while True:
+                category_id = input_int("请输入新的分类ID: ")
+                if validate_category_access(current_user[0], category_id, trans_type):
+                    updates['category_id'] = category_id
+                    break
+                print("无效的分类ID，请重新选择。")
+        
+        elif field_choice == '5':
+            new_date = input_date("新的日期")
+            updates['date'] = new_date.strftime('%Y-%m-%d')
+        
+        elif field_choice == '6':
+            new_description = input("新的备注: ").strip()
+            updates['description'] = new_description if new_description else None
+        
+        elif field_choice == '7':
+            break
+        else:
+            print("无效选择，请重新输入。")
+    
+    if updates:
+        print("\n将要应用的修改:")
+        for key, value in updates.items():
+            print(f"{key}: {value}")
+        
+        confirm = input("\n确认保存修改吗? (y/n): ").lower()
+        if confirm == 'y':
+            if edit_transaction(tid, current_user[0], updates):
+                print("修改成功！")
+            else:
+                print("修改失败！")
+        else:
+            print("已取消修改。")
+    else:
+        print("没有进行任何修改。")
+
+def delete_transaction_flow(current_user, records):
+    """删除交易记录流程"""
+    if not records:
+        print("没有可删除的记录。")
+        return
+    
+    tid = input_int("输入要删除的交易ID: ")
+    
+    # 验证交易ID是否存在
+    target_record = None
+    for record in records:
+        if record[0] == tid:
+            target_record = record
+            break
+    
+    if not target_record:
+        print("无效的交易ID或该记录不属于当前过滤结果。")
+        return
+    
+    print(f"\n将要删除的交易记录:")
+    print(f"ID: {target_record[0]}")
+    print(f"类型: {target_record[1]}")
+    print(f"金额: {target_record[2]}")
+    print(f"分类: {target_record[3]}")
+    print(f"账户: {target_record[4]}")
+    print(f"日期: {target_record[5]}")
+    print(f"备注: {target_record[6] if target_record[6] else '无'}")
+    
+    confirm = input("\n确认删除这条记录吗? 此操作不可撤销! (y/n): ").lower()
+    if confirm == 'y':
+        if delete_transaction(tid, current_user[0]):
+            print("删除成功！")
+        else:
+            print("删除失败！")
+    else:
+        print("已取消删除。")
+
+def main():
+    init_db()
+    current_user = None
+    
+    while True:
+        if current_user is None:
+            print("\n=== 个人账簿管理系统 ===")
+            print("1. 注册")
+            print("2. 登录")
+            print("3. 退出")
+            choice = input("请选择操作: ")
+            
+            if choice == '1':
+                username = input("用户名: ")
+                password = input("密码: ")
+                if register_user(username, password):
+                    print("注册成功！")
+                else:
+                    print("用户名已存在。")
+            
+            elif choice == '4':
+                # 查看统计
+                print("\n--- 统计功能 ---")
+                print("1. 按分类统计")
+                print("2. 按月份统计")
+                print("3. 按账户统计")
+                print("4. 财务汇总")
+                stat_choice = input("请选择统计类型: ")
+                if stat_choice == '1':
+                    start_date = input("开始日期 (YYYY-MM-DD): ")
+                    end_date = input("结束日期 (YYYY-MM-DD): ")
+                    result = get_category_stats(current_user[0], start_date, end_date)
+                    print("按分类统计结果:")
+                    for row in result:
+                        print(row)
+                elif stat_choice == '2':
+                    year = input("年份 (如2024): ")
+                    result = get_monthly_stats(current_user[0], int(year))
+                    print("按月份统计结果:")
+                    for row in result:
+                        print(row)
+                elif stat_choice == '3':
+                    start_date = input("开始日期 (YYYY-MM-DD): ")
+                    end_date = input("结束日期 (YYYY-MM-DD): ")
+                    result = get_account_stats(current_user[0], start_date, end_date)
+                    print("按账户统计结果:")
+                    for row in result:
+                        print(row)
+                elif stat_choice == '4':
+                    start_date = input("开始日期 (YYYY-MM-DD): ")
+                    end_date = input("结束日期 (YYYY-MM-DD): ")
+                    summary = get_summary(current_user[0], start_date, end_date)
+                    print("财务汇总:")
+                    for k, v in summary.items():
+                        print(f"{k}: {v}")
+                else:
+                    print("无效选择。")
+            elif choice == '5':
+                current_user = None
+                print("已退出登录。")
+            else:
+                print("无效选择。")
 
 if __name__ == '__main__':
     main()
